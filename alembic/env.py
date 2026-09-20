@@ -57,10 +57,19 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
+    database = context.get_x_argument(as_dictionary=True).get(
+        "database", "main"
+    )
+
+    if database == "test":
+        database_url = test_settings.database_url
+    elif database == "main":
+        database_url = settings.database_url
+    else:
+        raise ValueError(f"Unknown database: {database}")
+
     connectable = async_engine_from_config(
-        {
-            "sqlalchemy.url": get_database_url(),
-        },
+        {"sqlalchemy.url": database_url},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
