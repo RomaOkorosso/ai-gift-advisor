@@ -1,32 +1,41 @@
 import pytest
+
 from sqlalchemy.ext.asyncio import (
-    create_async_engine,
-    async_sessionmaker,
     AsyncSession,
+    create_async_engine,
 )
 
-from tests import test_settings
+from tests.config import test_settings
+
+
+@pytest.fixture(scope="session")
+def anyio_backend():
+    return "asyncio"
+
+
+@pytest.fixture(scope="session")
+async def engine(anyio_backend):
+    engine = create_async_engine(
+        test_settings.database_url,
+        echo=False,
+    )
+
+    yield engine
+
+    await engine.dispose()
 
 
 @pytest.fixture
-async def db_session():
-    engine = create_async_engine(
-        test_settings.database_url,
-    )
-
+async def db_session(engine):
     async with engine.connect() as connection:
         transaction = await connection.begin()
 
-        session_factory = async_sessionmaker(
-            bind=connection,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            join_transaction_mode="create_savepoint",
-        )
-
-        async with session_factory() as session:
-            yield session
-
-        await transaction.rollback()
-
-    await engine.dispose()
+        async with AsyncSession(
+                bind=connection,
+                join_transaction_mode="create_savepoint",
+                expire_on_commit=False,
+        ) as session:
+            try:
+                yield session
+            finally:
+                await transaction.rollback()
