@@ -1,6 +1,9 @@
-def main():
-    print("AI Gift Advisor")
+from fastapi import FastAPI
+from .schemas import Gift
+
+app = FastAPI()
 
 
-if __name__ == "__main__":
-    main()
+@app.post("/gift")
+async def post_gift(gift: Gift):
+    return gift
