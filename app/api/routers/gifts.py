@@ -1,9 +1,8 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.session import get_db
+from app.api.dependencies import get_gift_service
 from app.schemas.gifts import Gift
 from app.services import GiftService
 
@@ -13,12 +12,9 @@ gift_router = APIRouter(
 )
 
 
-@gift_router.post("")
+@gift_router.post("", status_code=status.HTTP_201_CREATED)
 async def post_gift(
         gift: Gift,
-        db: Annotated[AsyncSession, Depends(get_db)],
-        status_code=status.HTTP_201_CREATED
+        service: Annotated[GiftService, Depends(get_gift_service)]
 ):
-    service = GiftService(db)
-
     return await service.create_gift_request(gift)
