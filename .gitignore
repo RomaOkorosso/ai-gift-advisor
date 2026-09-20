@@ -39,7 +39,7 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
-# Unit test / coverage reports
+# Unit tests / coverage reports
 htmlcov/
 .tox/
 .nox/
@@ -138,3 +138,4 @@ core/settings_local.py
 logs/
 
 script.py
+.env.test
