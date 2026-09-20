@@ -1,9 +1,19 @@
 from fastapi import FastAPI
-from .schemas import Gift
 
-app = FastAPI()
+from app.api import gift_router
+
+app = FastAPI(
+    title="AI Gift Advisor",
+)
+
+app.include_router(gift_router)
 
 
-@app.post("/gift")
-async def post_gift(gift: Gift):
-    return gift
+@app.get("/")
+async def root():
+    return {"message": "AI Gift Advisor API"}
+
+
+@app.get("/health")
+async def health():
+    return {"message": "OK"}
