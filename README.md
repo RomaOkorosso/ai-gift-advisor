@@ -79,6 +79,31 @@ ai-gift-advisor/
 
 ## Local setup
 
+### Recommended workflow with uv and Make
+
+Install `uv`, Docker Engine with Docker Compose, and `make`, then run
+from the project directory:
+
+```bash
+cp .env.example .env
+cp .env.test.example .env.test
+make install
+make dev
+```
+
+`make install` syncs `.venv` from `uv.lock`. Make targets use `--locked`
+so dependency changes require an explicit lock-file update.
+`make dev` waits for development PostgreSQL, applies migrations, and starts the API.
+In another terminal, run `make test` to start and migrate only the test database
+before running pytest. Test settings reject database names other than
+`gift_advisor_test`; exported `POSTGRES_*` variables override `.env.test`,
+so development variables in your shell can cause a safe configuration failure.
+
+`make test-down` stops only test PostgreSQL. `make down` stops both databases.
+`make clean` also deletes their data volumes; it is never part of `make test`.
+
+The manual setup alternative is described below.
+
 ### 1. Clone the repository
 
 ```bash
@@ -211,6 +236,12 @@ http://127.0.0.1:8000/docs
 
 Make sure the test PostgreSQL container is running and its migrations are applied.
 
+With `uv` and `make` installed, `make test` starts the test database,
+applies its migrations, and runs the test suite.
+
+If tests fail with `relation "gift_requests" does not exist`, apply the
+test migration with `python -m alembic -x database=test upgrade head`.
+
 Run the full test suite:
 
 ```bash
@@ -265,6 +296,10 @@ Example request:
 ```
 
 The endpoint currently validates the request and stores it in PostgreSQL.
+
+The budget must be between 0 and 2147483647. Descriptions are trimmed and
+must contain between 10 and 2000 characters after trimming.
+SQL query logging is disabled by default; set `SQL_ECHO=true` locally to enable it.
 
 AI-generated recommendations will be added in the next development stage.
 

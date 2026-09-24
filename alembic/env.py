@@ -7,10 +7,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-from app.core.config import settings
 from app.db.base import Base
 from app.models.gift import GiftRequestModel
-from tests.config import test_settings
 
 config = context.config
 
@@ -23,12 +21,16 @@ target_metadata = Base.metadata
 def get_database_url() -> str:
     database = context.get_x_argument(
         as_dictionary=True
-    ).get("database")
+    ).get("database", "main")
 
-    if database == "tests":
+    if database == "test":
+        from tests.config import test_settings
+
         return test_settings.database_url
 
-    if database is None:
+    if database == "main":
+        from app.core.config import settings
+
         return settings.database_url
 
     raise ValueError(
@@ -57,27 +59,17 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    database = context.get_x_argument(as_dictionary=True).get(
-        "database", "main"
-    )
-
-    if database == "test":
-        database_url = test_settings.database_url
-    elif database == "main":
-        database_url = settings.database_url
-    else:
-        raise ValueError(f"Unknown database: {database}")
-
     connectable = async_engine_from_config(
-        {"sqlalchemy.url": database_url},
+        {"sqlalchemy.url": get_database_url()},
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+    finally:
+        await connectable.dispose()
 
 
 def run_migrations_online() -> None:
