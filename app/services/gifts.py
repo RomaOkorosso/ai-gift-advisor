@@ -8,6 +8,9 @@ class GiftService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def get_gift_request(self, gift_id: int) -> GiftRequestModel | None:
+        return await self.db.get(GiftRequestModel, gift_id)
+
     async def create_gift_request(
             self,
             gift: Gift,

@@ -280,7 +280,7 @@ docker compose --profile tests down -v
 
 ## API
 
-Current endpoint:
+Create a gift request:
 
 ```text
 POST /gift
@@ -296,6 +296,23 @@ Example request:
 ```
 
 The endpoint currently validates the request and stores it in PostgreSQL.
+
+Successful creation returns HTTP `201` with `id`, `budget`, and `description`.
+The budget defaults to `0` when omitted.
+
+Retrieve a saved request:
+
+```text
+GET /gift/{gift_id}
+```
+
+This returns HTTP `200` with the same fields. A missing request returns
+HTTP `404` with `{"detail": "Gift request not found"}`. IDs must be integers
+between 1 and 2147483647; invalid IDs and invalid creation payloads return
+HTTP `422`.
+
+Authentication and ownership checks are planned for stage 8. Currently,
+saved requests can be retrieved by ID without authentication.
 
 The budget must be between 0 and 2147483647. Descriptions are trimmed and
 must contain between 10 and 2000 characters after trimming.
