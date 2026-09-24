@@ -1,349 +1,136 @@
 # AI Gift Advisor
 
-AI Gift Advisor is a backend service for generating personalized gift recommendations based on a user's description and budget.
+Backend for personalized gift recommendations. The API currently
+validates, stores, and retrieves gift requests. The LLM integration
+layer and structured recommendation contract are implemented, but a real
+AI provider is not connected yet.
 
-The project is being built as a production-style backend application with FastAPI, PostgreSQL, SQLAlchemy, Alembic, Docker and, in the next stage, Google Gemini.
+## Stack
 
-## Tech stack
+Python 3.14+, FastAPI, PostgreSQL 17, async SQLAlchemy, Alembic, Docker
+Compose, uv, pytest/AnyIO.
 
-- Python 3.14+
-- FastAPI
-- PostgreSQL 17
-- SQLAlchemy 2.x (async)
-- asyncpg
-- Alembic
-- Docker Compose
-- Pydantic Settings
-- pytest
-- AnyIO
-- HTTPX
+## Quick start
 
-## Current status
+Install `uv`, Docker Engine with Docker Compose, and `make`.
 
-Implemented:
+From the project directory:
 
-- FastAPI application structure
-- request validation with Pydantic
-- async PostgreSQL connection
-- SQLAlchemy ORM model for gift requests
-- Alembic migrations
-- service layer
-- FastAPI dependency injection
-- separate PostgreSQL database for tests
-- transaction rollback between database tests
-- API tests with dependency overrides
-- full integration test: HTTP -> FastAPI -> service -> PostgreSQL
-
-Next milestone:
-
-- Google Gemini integration
-- structured AI responses validated with Pydantic
-- gift recommendation generation
-- error handling and provider abstraction
-
-## Project structure
-
-```text
-ai-gift-advisor/
-├── alembic/
-│   ├── versions/
-│   └── env.py
-├── app/
-│   ├── api/
-│   │   ├── routers/
-│   │   └── dependencies.py
-│   ├── core/
-│   │   └── config.py
-│   ├── db/
-│   │   ├── base.py
-│   │   └── session.py
-│   ├── models/
-│   │   └── gift.py
-│   ├── schemas/
-│   │   └── gifts.py
-│   ├── services/
-│   │   └── gifts.py
-│   └── main.py
-├── tests/
-│   ├── config.py
-│   ├── conftest.py
-│   ├── test_database.py
-│   ├── test_gift_api.py
-│   └── test_gift_integration.py
-├── .env.example
-├── .env.test.example
-├── alembic.ini
-├── compose.yml
-└── pyproject.toml
-```
-
-## Local setup
-
-### Recommended workflow with uv and Make
-
-Install `uv`, Docker Engine with Docker Compose, and `make`, then run
-from the project directory:
-
-```bash
+``` bash
 cp .env.example .env
 cp .env.test.example .env.test
 make install
 make dev
 ```
 
-`make install` syncs `.venv` from `uv.lock`. Make targets use `--locked`
-so dependency changes require an explicit lock-file update.
-`make dev` waits for development PostgreSQL, applies migrations, and starts the API.
-In another terminal, run `make test` to start and migrate only the test database
-before running pytest. Test settings reject database names other than
-`gift_advisor_test`; exported `POSTGRES_*` variables override `.env.test`,
-so development variables in your shell can cause a safe configuration failure.
+`make install` syncs the Python environment from `uv.lock`. `make dev`
+starts PostgreSQL, applies migrations, and starts the API.
 
-`make test-down` stops only test PostgreSQL. `make down` stops both databases.
-`make clean` also deletes their data volumes; it is never part of `make test`.
+-   API: http://127.0.0.1:8000
+-   Swagger UI: http://127.0.0.1:8000/docs
 
-The manual setup alternative is described below.
+## Configuration
 
-### 1. Clone the repository
+Development and test databases are configured separately using `.env`
+and `.env.test`. Example configuration files are included in the
+repository.
 
-```bash
-git clone <repository-url>
-cd ai-gift-advisor
-```
-
-### 2. Create a virtual environment
-
-Make sure Python 3.14 or newer is installed.
-
-```bash
-python3.14 -m venv .venv
-source .venv/bin/activate
-```
-
-Upgrade pip:
-
-```bash
-python -m pip install --upgrade pip
-```
-
-### 3. Install dependencies
-
-Install the project and development dependency group:
-
-```bash
-python -m pip install -e . --group dev
-```
-
-If your pip version does not support dependency groups yet, install the development tools separately:
-
-```bash
-python -m pip install -e .
-python -m pip install pytest httpx anyio
-```
-
-### 4. Configure environment variables
-
-Create the main environment file:
-
-```bash
-cp .env.example .env
-```
-
-Create the test environment file:
-
-```bash
-cp .env.test.example .env.test
-```
-
-Default local PostgreSQL configuration used by the project:
-
-```dotenv
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=gift_advisor
-POSTGRES_PORT=5432
-```
-
-Test database configuration:
-
-```dotenv
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=gift_advisor_test
-POSTGRES_PORT=5433
-```
+  Environment   Database              Local port
+  ------------- --------------------- ------------
+  Development   `gift_advisor`        5432
+  Tests         `gift_advisor_test`   5433
 
 Do not commit `.env` or `.env.test`.
 
-## Database
+SQL logging is disabled by default and can be enabled locally with
+`SQL_ECHO=true`.
 
-### Start the main PostgreSQL database
+## Commands
 
-```bash
-docker compose up -d
-```
+  -----------------------------------------------------------------------
+  Command                             Action
+  ----------------------------------- -----------------------------------
+  `make install`                      Sync dependencies from the lock
+                                      file
 
-Check its status:
+  `make dev`                          Start the database, apply
+                                      migrations, and run the API
 
-```bash
-docker compose ps
-```
+  `make test`                         Start test PostgreSQL, apply test
+                                      migrations, and run pytest
 
-### Apply database migrations
+  `make up`                           Start development PostgreSQL
 
-```bash
-python -m alembic upgrade head
-```
+  `make migrate`                      Apply development database
+                                      migrations
 
-### Start the test PostgreSQL database
+  `make test-down`                    Stop test PostgreSQL
 
-The test database is enabled through the `tests` Docker Compose profile:
+  `make down`                         Stop both databases
 
-```bash
-docker compose --profile tests up -d
-```
+  `make logs`                         Follow development database logs
 
-The databases use different local ports:
+  `make ps`                           Show container status
 
-- main database: `127.0.0.1:5432`
-- test database: `127.0.0.1:5433`
+  `make clean`                        Remove containers and database
+                                      volumes
+  -----------------------------------------------------------------------
 
-### Apply migrations to the test database
+**`make clean` deletes data stored in the project database volumes.**
 
-```bash
-python -m alembic -x database=test upgrade head
-```
-
-## Run the API
-
-```bash
-python -m uvicorn app.main:app --reload
-```
-
-The API will be available at:
-
-```text
-http://127.0.0.1:8000
-```
-
-Swagger UI:
-
-```text
-http://127.0.0.1:8000/docs
-```
-
-## Tests
-
-Make sure the test PostgreSQL container is running and its migrations are applied.
-
-With `uv` and `make` installed, `make test` starts the test database,
-applies its migrations, and runs the test suite.
-
-If tests fail with `relation "gift_requests" does not exist`, apply the
-test migration with `python -m alembic -x database=test upgrade head`.
-
-Run the full test suite:
-
-```bash
-python -m pytest -v
-```
-
-The database integration tests use transactions and roll them back after each test so test data does not persist between tests.
-
-## Useful Docker commands
-
-Show running containers:
-
-```bash
-docker ps
-```
-
-Show project services:
-
-```bash
-docker compose ps
-```
-
-Stop project containers:
-
-```bash
-docker compose --profile tests down
-```
-
-Stop containers and delete project volumes:
-
-```bash
-docker compose --profile tests down -v
-```
-
-> Warning: `-v` deletes PostgreSQL data stored in Docker volumes.
+Tests use a separate PostgreSQL database and roll back test
+transactions. LLM tests use fake providers and do not require an API key
+or external calls.
 
 ## API
 
-Create a gift request:
+### Create a request
 
-```text
-POST /gift
-```
+`POST /gift`
 
-Example request:
-
-```json
+``` json
 {
   "budget": 3000,
   "description": "Friend likes programming, video games and science fiction"
 }
 ```
 
-The endpoint currently validates the request and stores it in PostgreSQL.
+Returns `201` with `id`, `budget`, and `description`.
 
-Successful creation returns HTTP `201` with `id`, `budget`, and `description`.
-The budget defaults to `0` when omitted.
+The budget must be a non-negative integer and defaults to `0` when
+omitted. The description must contain 10--2000 characters after trimming
+surrounding whitespace. Invalid input returns `422`.
 
-Retrieve a saved request:
+### Retrieve a request
 
-```text
-GET /gift/{gift_id}
+`GET /gift/{gift_id}`
+
+Returns `200` with the saved request, `404` if it does not exist, or
+`422` for an invalid ID.
+
+Authentication and request ownership are not implemented yet.
+
+## Architecture
+
+The application keeps HTTP, database, and LLM-related logic separated:
+
+``` text
+HTTP API
+   |
+Gift Service --------> PostgreSQL
+   |
+Recommendation Service
+   |
+LLM Provider
 ```
 
-This returns HTTP `200` with the same fields. A missing request returns
-HTTP `404` with `{"detail": "Gift request not found"}`. IDs must be integers
-between 1 and 2147483647; invalid IDs and invalid creation payloads return
-HTTP `422`.
+The recommendation service depends on a provider interface rather than a
+specific LLM SDK. This allows a real provider to be added without
+coupling the application logic directly to it.
 
-Authentication and ownership checks are planned for stage 8. Currently,
-saved requests can be retrieved by ID without authentication.
-
-The budget must be between 0 and 2147483647. Descriptions are trimmed and
-must contain between 10 and 2000 characters after trimming.
-SQL query logging is disabled by default; set `SQL_ECHO=true` locally to enable it.
-
-AI-generated recommendations will be added in the next development stage.
-
-## Planned AI integration
-
-Google Gemini will be used as the first LLM provider, with minimal API cost as a priority.
-
-Planned architecture:
-
-```text
-HTTP request
-    ↓
-FastAPI router
-    ↓
-Gift service
-    ↓
-LLM client
-    ↓
-Google Gemini
-    ↓
-Structured response
-    ↓
-Pydantic validation
-```
-
-Future work will also include provider abstraction so another LLM can be added without rewriting the business logic.
+Additional implementation details and architectural decisions are
+documented in [DEVELOPMENT.md](DEVELOPMENT.md).
 
 ## License
 
-See `LICENSE`.
+See [LICENSE](LICENSE).
